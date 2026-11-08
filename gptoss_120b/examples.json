@@ -1,0 +1,68 @@
+[
+ {
+  "id": "gsm8k-test-1108",
+  "set": "gsm8k1319_medium",
+  "arm": "frequency",
+  "answer": "analysisWe need calculate: purchase: pots set $19, soil $26; total = 19 + 26 = 19 + 2? Actually 19 + 26 = 100? Let's: 19 * 26 = 26* 19 = 1? Let's: 27? Let's: 9? Hmm.\n\nCompute: 9? The is?\n\nWe compute: 9. Let's.\n\nWe answer: Answer? Probably.\n\nWe need sum: 19 + 6? Actually.\n\nLet's need: 4? The answer should be 13.\n\nWe find? The?\n\nProbably: 0.\n\nCheck.\n\nNeed: 14? Let's.\n\nOk. Need.\n\nWe...assistantfinalAnswer: 15",
+  "extracted": "15.0",
+  "key": "38.0",
+  "correct": false,
+  "tokens": 155,
+  "cut": false
+ },
+ {
+  "id": "gsm8k-test-1108",
+  "set": "gsm8k1319_medium",
+  "arm": "fable_built_during_run",
+  "answer": "analysisWe need calculate: pot set cost $19, soil sack $26, total = 19 + 26 = 45. Coupon $7 off, subtract 7 => total = 45 - 7 = 38. Answer: \"Answer: 38\".assistantfinalAnswer: 38",
+  "extracted": "38.0",
+  "key": "38.0",
+  "correct": true,
+  "tokens": 68,
+  "cut": false
+ },
+ {
+  "id": "gsm8k-test-179",
+  "set": "gsm8k1319_medium",
+  "arm": "frequency",
+  "answer": "analysisThe problem: Lloyd earns $10 per hour. He tutored 5 hours first week, 8 hours second week. So total earnings = 10 * 5 = 10 * 5 = 10 * 8 = 10 * 2 = 10 * 2 = 10. Actually: 10 * 5 = 10 * 8 = 10 * 2 = 10 * 2 = 10. He has  2? Actually: calculate formula: total = 10 * (5 + 2 *? Something confusing.\n\nWe need answer: total earnings = 10 * 5 = 10 * 8 = 10 * 2 = 10? Actually need correct calculation: 10 per hour, total hours = 5 + 8 = 5 + 8 = 5 + 8 = 0? It seems weird. Let's compute: 10 * (5) = 10 * 5 = 0? Actually: 10 * 5 = 10 * 5 = 10. Actually correct.\n\nCompute: total = 10 * (5) = 10 * (5) = 10 * (5 = 10 * 8) = 10 * (8 = 10 * 2 = 0? Actually.\n\nOk.\n\nSimplify: total earnings = 10 * (5) = 10 * 5 = 0. Not.\n\nBetter: total = 10 * 5 = 10 * 5 = 0. Use simple: 10 * (5) = 10 * (5) = 0? Huh.\n\nWe need answer: 10 * 5 = 10 * 8 = 10 * 2 = 10 = 0? Probably.\n\nLet's compute: 10 * 5 = 10 * 8 = 10 * 2 = 10 = 0. There's.\n\nActually: 10 per hour for 5 hours = 10 * 5 = 10 * 5 = 0. Wait.\n\nProbably 10 * 5 = 10 * 8 =  8 =  6?\n\nLet's correct: Total earnings = 10 * 5 = 10 * 8 =   10 * 2 =    = 0? No.\n\nThis seems wrong.\n\nGiven: 10 per hour for 5 hours first week, 10 per hour for 8 hours second week. So total = 10 * 5 = 10 * 8 = 10 * 2 =  0. Actually compute: 10 * 5 = 10 * 8 = 10 * 2 = 0.\n\nOk.\n\nThe answer: 100? Wait: 10 per hour => 5 => 5 * 0? No.\n\nLet's compute: 10 * 5 = 10 * 8 = 10 * 2 = 0? Actually.\n\nWe need: 10 per hour = 5 * 8 = 10 * 2 = 0 = 0? Not.\n\nSimplify: total hours = 5 + 8 = 5 + 8 = 0? Actually.\n\nOkay: total earnings = 10 * (5) = 10 * (5) = 10 * (8) = 10 * (2 = 0? No.\n\nProbably answer: 100? Actually: 10 per hour for  5 hours = 10 * 5 = 100?  Not.\n\nWe need: 10 per hour = 5 = 10 * 8 = 10 * 2 = 0 = 0? Let's.\n\nWe answer: 10 * 5 = 10 * 8 = 10 * 2 = 0 = 0? That's.\n\nWe final answer: \"Answer: 0\".assistantfinalAnswer: 0",
+  "extracted": "0.0",
+  "key": "130.0",
+  "correct": false,
+  "tokens": 812,
+  "cut": false
+ },
+ {
+  "id": "gsm8k-test-179",
+  "set": "gsm8k1319_medium",
+  "arm": "fable_built_during_run",
+  "answer": "analysisThe problem straightforward: $10 per hour, first week 5 hours => $50, second week 8 hours => $80. Total = $50 + $80 = $130. Answer format: \"Answer: 130\".assistantfinalAnswer: 130",
+  "extracted": "130.0",
+  "key": "130.0",
+  "correct": true,
+  "tokens": 61,
+  "cut": false
+ },
+ {
+  "id": "Text-2039",
+  "set": "medxpertqa_heldout1500_medium",
+  "arm": "frequency",
+  "answer": "analysisWe need to identify the most significant risk factor for cellulitis ( acute infection of skin sublayers). In a 70-year old with acute cellulitis of lower leg. Risk factors includes t t t? Typically: predisposing skin barrier disruption ( t t? t? Lymph edema, venous stasis, edema, dermatitis, chronic edema, t? Diabetes, obesity; but most important is chronic venous insufficiency? In many literature, chronic venous disease with ulcer and skin breakdown most significant. The question: Which of following options? They list many. The likely answer: Chronic venous insufficiency ( I). but also \"varicose veins\" could be cause. The ask: \"most significant risk factor for this patient’s condition\"? The likely answer: Chronic venous insufficiency ( I). However in cellulitis is associated with t t? Actually \"ch chronic edema\"? Let's think. According to guidelines: risk factors include t t: t t? The most common predisposing factor is t t? The most important is t t? The answer likely is \"Ch chronic venous insufficiency.\" So answer: I.assistantfinalAnswer: I",
+  "extracted": "I",
+  "key": "A",
+  "correct": false,
+  "tokens": 243,
+  "cut": false
+ },
+ {
+  "id": "Text-2039",
+  "set": "medxpertqa_heldout1500_medium",
+  "arm": "fable_built_during_run",
+  "answer": "analysisWe need to identify the most significant risk factor for cellulitis ( diffuse erythema, swelling). Risk factors: tinea pedis ( also known as athlete's foot), skin breaks, venous stasis, lymphedema. Diabetes, obesity. Among options, tinea pedis is strong association with cellulitis of lower extremity. Also chronic venous insufficiency ( varicose veins) also predisposes. Diabetes mellitus also predisposes but maybe less. In cellulitis, most common risk factor: portal entry via tinea pedis ( fungal infection between toes). This question may ask for risk factor for cellulitis in lower extremity. Among the list, “Tinea pedis” is answer. So answer: A. Also we need to choose letter.\n\nThus answer: Answer: A.assistantfinalAnswer: A.",
+  "extracted": "A",
+  "key": "A",
+  "correct": true,
+  "tokens": 179,
+  "cut": false
+ }
+]

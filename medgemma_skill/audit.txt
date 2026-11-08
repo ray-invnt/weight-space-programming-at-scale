@@ -1,0 +1,5 @@
+Audit of run skillmove_run1 (run t1): the harness audit, rerun on CPU from the run's logged tool calls (same result as recorded at the time).
+PASS: 19 python blocks, 26 forward blocks, 25 of 25 passes, 0 FAIL, 0 WARN
+(26 forward blocks include one request the harness rejected as a duplicate and did not count; steps.jsonl leaves it out.)
+With the editor's shell transcript added (transcript not released): 0 FAIL, 5 WARN; the five WARN findings are pattern
+false positives on the editor editing its own message files inside its run folder, read by hand.

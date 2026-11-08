@@ -1,0 +1,4 @@
+Audit of run m2: the harness audit, rerun on CPU from the run's logged tool calls (same result as recorded at the time).
+PASS: 36 python blocks, 33 forward blocks, 33 of 40 passes, 0 FAIL, 0 WARN
+(33 forward blocks in the log include one failed request that was not counted; one counted request sent from a chained
+message file, request 31, is missing from the log and is inserted in steps.jsonl from the request records.)

@@ -1,0 +1,85 @@
+{
+ "what": "The blind audit behind 'with MedGemma's change cut into six hidden pieces, it predicted from the weights alone whether each would help or hurt scan reading, and got all six right'. Fable (as auditor, a separate session from run skillmove_run1) received the six pieces under random letters, read only their weights, and locked its predictions (change in SLAKE F1 points when the piece alone is added to Gemma 3) before any of them was scored. Measured: Gemma 3 plus the piece, SLAKE seed 0, minus Gemma 3 seed 0 (rows in scores.csv).",
+ "predictions_locked": "2026-11-05, before scoring; sha256 of the locked predictions file 59361e181d461fe6947a5ee417569ff9944c7f143f46e8c31bb3f5c87470b779",
+ "pieces": [
+  {
+   "label": "H",
+   "piece": "the image encoder and projector part of the change",
+   "scores_csv_arm": "vision_tower_only",
+   "predicted_slake_change": -4.0,
+   "predicted_range": [
+    -22.0,
+    10.0
+   ],
+   "measured_slake_f1_change_full_set": -14.3,
+   "measured_slake_f1_change_clean_set": -14.6,
+   "sign_right": true
+  },
+  {
+   "label": "M",
+   "piece": "the whole language-model part (attention, MLPs, norms, embedding)",
+   "scores_csv_arm": "piece_lm_only",
+   "predicted_slake_change": 10.0,
+   "predicted_range": [
+    -5.0,
+    24.0
+   ],
+   "measured_slake_f1_change_full_set": 21.2,
+   "measured_slake_f1_change_clean_set": 22.6,
+   "sign_right": true
+  },
+  {
+   "label": "F",
+   "piece": "the attention part only",
+   "scores_csv_arm": "piece_attn_only",
+   "predicted_slake_change": 1.0,
+   "predicted_range": [
+    -7.0,
+    9.0
+   ],
+   "measured_slake_f1_change_full_set": 3.0,
+   "measured_slake_f1_change_clean_set": 3.5,
+   "sign_right": true
+  },
+  {
+   "label": "P",
+   "piece": "the MLP part only",
+   "scores_csv_arm": "piece_mlp_only",
+   "predicted_slake_change": 3.0,
+   "predicted_range": [
+    -6.0,
+    12.0
+   ],
+   "measured_slake_f1_change_full_set": 18.6,
+   "measured_slake_f1_change_clean_set": 20.2,
+   "sign_right": true
+  },
+  {
+   "label": "R",
+   "piece": "the embedding part only",
+   "scores_csv_arm": "piece_embed_only",
+   "predicted_slake_change": -2.0,
+   "predicted_range": [
+    -14.0,
+    3.0
+   ],
+   "measured_slake_f1_change_full_set": -3.0,
+   "measured_slake_f1_change_clean_set": -2.8,
+   "sign_right": true
+  },
+  {
+   "label": "B",
+   "piece": "the largest 5% of entries of every tensor",
+   "scores_csv_arm": "piece_trim_top5pct",
+   "predicted_slake_change": -14,
+   "predicted_range": [
+    -30,
+    -3
+   ],
+   "measured_slake_f1_change_full_set": -13.4,
+   "measured_slake_f1_change_clean_set": -15.5,
+   "sign_right": true
+  }
+ ],
+ "signs_right": 6
+}

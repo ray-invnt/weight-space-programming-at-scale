@@ -1,0 +1,2 @@
+Audit of run l2: the harness audit, rerun on CPU from the run's logged tool calls.
+PASS: 23 python blocks, 24 forward blocks, 24 of 30 passes, 0 FAIL, 0 WARN

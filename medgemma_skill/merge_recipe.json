@@ -1,0 +1,21 @@
+{
+  "name": "Fable's merge, run skillmove_run1 (the final selection of run t1)",
+  "base": {"repo": "google/gemma-3-4b-it", "revision": "093f9f388b31de276ce2de164bdc2081324b9767"},
+  "source": {"repo": "google/medgemma-4b-it", "revision": "290cda5eeccbee130f987c4ad74a59ae6f196408"},
+  "rule": "for every tensor (same 883 names in both checkpoints): DELTA = bf16(float32(SOURCE) - float32(BASE)); MERGED = bf16(float32(BASE) + scale * float32(DELTA))",
+  "scales": [
+    {"tensors": "vision_tower.*", "count": 437, "scale": 1.0, "in words": "the image encoder, copied whole"},
+    {"tensors": "multi_modal_projector.*", "count": 2, "scale": 1.0, "in words": "the image-to-text projector, copied whole"},
+    {"tensors": "language_model.model.layers.{0..16}.mlp.{gate_proj,up_proj,down_proj}.weight", "count": 51, "scale": 1.0, "in words": "the MLPs of the first 17 layers, copied whole"},
+    {"tensors": "every other language_model.* tensor", "count": 393, "scale": 0.5, "in words": "all attention projections and q/k norms, the MLPs of layers 17 to 33, all layer norms, the tied embedding and the final norm: half of MedGemma's change"}
+  ],
+  "note_on_copied_whole": "scale 1.0 through the bf16 DELTA is how the scored checkpoint was built; build.py prints how many entries of these tensors differ from MedGemma's own (bf16 rounding of DELTA and of the sum)",
+  "check": {
+    "tensors": 883,
+    "params": 4300079472,
+    "entries_changed_vs_base": 4259637526,
+    "merged_digest": "e1bf97fbab2090ec13e6dc079231a1f8461b6481d30d2c236c246f230147cc3c",
+    "base_digest": "2fae5a6b5c36f0c31af79d3bb3440280cbf0d754c93076b4d5482a71ac8c251b",
+    "digest_definition": "sha256 of the lines '<tensor name> <sha256 of the tensor's raw bf16 bytes>\\n' over the tensor names in sorted order"
+  }
+}

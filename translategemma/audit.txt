@@ -1,0 +1,2 @@
+11 Python runs, 9 forward requests (9 counted of budget 30), 1 shell logs
+VERDICT: PASS

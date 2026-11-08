@@ -1,0 +1,114 @@
+[
+ {
+  "id": "CMU_1:8",
+  "language": "am",
+  "arm": "translategemma",
+  "output": "እናም፣ сейчас у вас эта የልብ ህመም አለ?",
+  "slip": true
+ },
+ {
+  "id": "CMU_1:8",
+  "language": "am",
+  "arm": "fable_edit",
+  "output": "እናም ይህ የልብ ህመምን እየተሰማዎት ነው?",
+  "slip": false
+ },
+ {
+  "id": "CMU_1:16",
+  "language": "am",
+  "arm": "translategemma",
+  "output": "እናም आज እኔ በጣም የከባድ የልብ ህመም እ感觉",
+  "slip": true
+ },
+ {
+  "id": "CMU_1:16",
+  "language": "am",
+  "arm": "fable_edit",
+  "output": "እናም ከዛሬ በኋላ እውነተኛ የልብ ህመም እየተሰማኝ ነው።",
+  "slip": false
+ },
+ {
+  "id": "Wikipedia_handpicked_3:1623",
+  "language": "ti",
+  "arm": "translategemma",
+  "output": "ኣ Antibodies (serology) ክ发现፣ ኣብ diagnóstico እና ብሰላማ ክን seguimiento ንግጥ።",
+  "slip": true
+ },
+ {
+  "id": "Wikipedia_handpicked_3:1623",
+  "language": "ti",
+  "arm": "fable_edit",
+  "output": "ኣብ መለየት ኣንቲቦዲዎች (ሴሮሎጂ) ንማረጋገጽ እና ንህዝብ ክንተን መከታይ ተጠቅሰ ትኽእል።",
+  "slip": false
+ },
+ {
+  "id": "CMU_1:103",
+  "language": "km",
+  "arm": "translategemma",
+  "output": " esattamente в центр груди",
+  "slip": true
+ },
+ {
+  "id": "CMU_1:103",
+  "language": "km",
+  "arm": "fable_edit",
+  "output": "ត្រង់ចំនៅចំកណ្តាលទ្រូង",
+  "slip": false
+ },
+ {
+  "id": "CMU_1:58",
+  "language": "my",
+  "arm": "translategemma",
+  "output": " သူမ ဘာ症状တွေ ရှိနေတာလဲ သိပါသလား",
+  "slip": true
+ },
+ {
+  "id": "CMU_1:58",
+  "language": "my",
+  "arm": "fable_edit",
+  "output": " သူမ ဘယ်လောက်သောရောဂါလက္ခဏာများ ရှိနေသည်ကို သိပါသလား။",
+  "slip": false
+ },
+ {
+  "id": "FLORES_devtest:116",
+  "language": "ka",
+  "arm": "translategemma",
+  "output": "Правительство ასევე დაგმ swore რამდენიმე მილიონი ვაქცინის კონტეინერი, რომელიც დაგეხმარება, რათა ჯანმრთელობის დაწესებულებები მომდევნო წელს მოამზადონ.",
+  "slip": true
+ },
+ {
+  "id": "FLORES_devtest:116",
+  "language": "ka",
+  "arm": "fable_edit",
+  "output": "მთავრობამ ასევე დაგმირა რამდენიმე მილიონი ვაქცინული ინფექციური დაავადების წინააღმდეგ, რაც დაგეხმარება ჯანმრთელობის ორგანოებს მომდევნო წელს მომზადებაში.",
+  "slip": false
+ },
+ {
+  "id": "FLORES_devtest:212",
+  "language": "si",
+  "arm": "translategemma",
+  "output": "එරට රෝයාලය, අනෙකුත් පුද්ගලයින්ට ව්‍යාප්ත වන අවදානම වැළczyć ඒ සඳහා, රෝගීන්ව වෙනත් පුද්ගලයින්ගෙන් अलग කිරීම सहित, රෝග පාලනය සඳහා අවශ්‍ය ක්‍රමිකාත්මක ක්‍රමයන් අනුගමනය කර ඇත.",
+  "slip": true
+ },
+ {
+  "id": "FLORES_devtest:212",
+  "language": "si",
+  "arm": "fable_edit",
+  "output": "එරට රෝගීන්ගේ ආසාදනය වැළඩීම සඳහා රෝග පාලන ක්‍රමයේ ක්‍රියාකාරකම් අනුශාලනය කර ඇත, එහිදී රෝගීන්ව සිටින අයට වෙනත් පුද්ගලයින් සමඟ වෙන් කිරීම ඇතුළත් වේ.",
+  "slip": false
+ },
+ {
+  "id": "FLORES_devtest:826",
+  "language": "lo",
+  "arm": "translategemma",
+  "output": "ជំងឺຕິດຕໍ່ ດ້ວຍຕົວវា, ຫລື ສິ່ງສູນເສຍທີ່ເປັນອັນຕະລາຍ ແລະສາມາດເຮັດໃຫ້ຄົນເຈັບ ຫຼື ເຈັບໄດ້, ໂດຍບໍ່ຕ້ອງມີການກະກຳ, ໂດຍສະເລ່ຍແລ້ວ ບໍ່ຖືວ່າເປັນສິ່ງທີ່ຕ້ອງกำจัด.",
+  "slip": true
+ },
+ {
+  "id": "FLORES_devtest:826",
+  "language": "lo",
+  "arm": "fable_edit",
+  "output": "ជំងឺឆ្លង ឬសត្វដែលអាចបង្កគ្រោះថ្នាក់ដល់មនុស្សដោយប្រើកម្លាំង, ជាធម្មតាមិនត្រូវបានគណនាថាជាសត្វដែលបង្ករគ្រោះថ្នាក់ទេ។",
+  "slip": true
+ }
+]

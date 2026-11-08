@@ -1,0 +1,187 @@
+TOOL RULE (read first). Every file you write yourself goes under <repo>/runs/lang_am_r1/driver/ (message
+files in driver/msgs/, analysis scripts in driver/scripts/, notes in driver/notes.md), written with the file-writing
+tool, never with shell redirects or heredocs; never write under <repo>/runs/lang_am_r1/work yourself (it lives on another disk; writes
+there by you are held for an approval nobody can give and your conversation freezes), the kernel writes there for
+you. Use the shell only for the submit command, for `python3 <script>` on a script you wrote, and for plain reads
+(cat, head, tail, grep, wc, ls). No mkdir, cp, mv, rm, tee or redirections.
+
+PREAMBLE (how to work with the harness). You are the driver in a weight-space experiment. You act through one
+command, from <repo>:
+    python3 harness/composite/cli.py submit lang_am_r1 <file>
+where <file> is a text file you write containing your explanation and exactly ONE fenced block, either ```python
+(code for the persistent kernel) or ```forward (one JSON request for the test-run tool). The command prints the
+reply (the kernel's output, or the test run's summary) and that reply is your next observation. Submit one message
+at a time and read the reply before the next. Write your message files under
+<repo>/runs/lang_am_r1/driver/msgs/ (any names), with the file-writing tool. Everything you submit and
+receive is logged in runs/lang_am_r1/. Use your shell only for writing message files, reading result files under
+<repo>/runs/lang_am_r1/work, and running analysis scripts over them when a kernel block is not convenient; the rules below on what the
+shell may not do are absolute. Stay inside these locations: runs/lang_am_r1/, data/practice/, the model folders and
+docs/COMPOSITE.md (the tool reference); nothing else in the repository concerns you. When you are done, submit a
+final message with no fenced block, and then end with a short report of what you built and the evidence. A test
+run may take up to 10 minutes to return; that is normal, wait for it (use a generous command timeout). If a submit
+command fails because the forward server is still starting, wait a minute and submit again.
+
+TASK. The resident model is TranslateGemma 4B-it, Google's translation fine-tune of Gemma 3 4B-it (34 layers of
+width 2,560; every layer has attention (8 query heads, 4 key/value heads of size 256; layers 5, 11, 17, 23 and 29
+attend to the whole context, the others to a sliding window of 1,024 tokens) and a GeGLU MLP of width 10,240;
+RMSNorm before and after each block plus query/key norms; vocabulary 262,208; the embedding matrix is tied to the
+output layer, so the same rows read tokens in and score tokens out). It has one failure you are to repair by
+editing its weights. Asked to translate English into Amharic, it loses its language mid-sentence: it writes
+Ge'ez script, then drops in a word from a language it knows better, and carries on. Seen in its outputs on the
+practice set: Hindi, Russian, Spanish, Chinese, Arabic-script and Tamil words, sometimes several in one sentence.
+Three of its outputs, with the English source:
+    "and are you having a runny nose?"  ->  እናም፣ क्या आप የጎልብሽት እየተሰማዎት?
+    "and tell me what symptoms are you having now?"  ->  እናም፣ сейчас какие ምልክቶች እየተሰማዎት?
+    "are you having any difficulty breathing now"  ->  እ Actualmente, क्या आपको dificultades በመ呼吸 ውስጥ አለ
+The meaning is mostly right; the language is not held. It happens under the plain instruction and under the
+model's own translation template, the original Gemma 3 4B-it does it more, and TranslateGemma was trained on
+Amharic and still does it. No prompt fixes it. On the practice set, by the measure below, TranslateGemma puts
+a foreign-script word into 78 percent of its outputs (the original Gemma: 88 percent) and a borrowed Latin word
+into 59 percent (66); 2 percent of its outputs have almost no Ge'ez at all (31). On the same sentences it scores
+19.54 chrF against the human references (the original Gemma 8.82; TranslateGemma in its own template
+18.46), and 68.3 COMET (53.0).
+
+Your job is ONE edit to the text-model tensors of TranslateGemma that makes it stay in Amharic, built from
+understanding where in the network the choice of language is made and where it is lost. Two requirements. First,
+translation quality must not fall: chrF against the references on sentences you did not use to choose the edit must
+be at least what it was, and it should rise, because a sentence that stays in its language matches its reference
+better. Second, the edit must be as general as you can make it. After you finish, the same edited model is also
+tested on languages you never see (other low-resource languages with their own scripts, where the unedited model
+lapses too) and on languages where it does not lapse (Hindi, Chinese, Spanish, Swahili), which must not get worse.
+A blanket preference for Ge'ez characters would pass the first test and fail the second; an edit that strengthens
+the model's hold on whatever language the instruction asked for would pass both. Find out which kind you can
+build, say which kind you ended with, and give the evidence. Scope: this is a repair, not a merge. An edit that
+touches every tensor a little is the opposite of what we want; the fewer tensors and rows it touches, the stronger
+the claim, and the count of tensors touched is part of your result. Change what you understand, where you have
+shown it matters, and leave the rest of the model exactly as it was.
+
+HOW IT WILL BE MEASURED. After you finish, your model translates held-out English sentences from the same source
+as your practice set (public-health text) into Amharic, greedy, at most 512 new tokens, plain instruction
+("Translate the following English text into Amharic. Output only the translation."), and is scored on four
+things against the unedited TranslateGemma: the share of outputs with a foreign-script word (the headline), the
+share with a borrowed Latin word, chrF (character n-gram F-score, sacrebleu defaults; corpus level, per-sentence
+for paired differences) and COMET-22. Then the same four on two or three unseen languages, dev and test, with the
+same edit and the same instruction naming their language. Then chrF and COMET on Hindi, Chinese, Spanish and
+Swahili to show nothing spilled. You never see the held-out sentences.
+
+THE MEASURE. Define it in the kernel and apply it to every run's outputs (<repo>/runs/lang_am_r1/work/run_<k>.jsonl):
+    import unicodedata, re
+    ETH = [(0x1200,0x137F),(0x1380,0x139F),(0x2D80,0x2DDF),(0xAB00,0xAB2F)]
+    LAT = [(0x41,0x5A),(0x61,0x7A),(0xC0,0x24F),(0x1E00,0x1EFF)]
+    def _in(c, rs): return any(a <= ord(c) <= b for a, b in rs)
+    def letters(s): return [c for c in s if unicodedata.category(c).startswith("L")]
+    def lapse(output, source, target=ETH):
+        ls = letters(output)
+        foreign = sum(1 for c in ls if not _in(c, target) and not _in(c, LAT))
+        src = {w.lower() for w in re.findall(r"[A-Za-z][A-Za-z'’-]*", source)}
+        borrowed = [w for w in re.findall(r"[A-Za-z][A-Za-z'’-]*", output) if w.lower() not in src and len(w) > 1]
+        share = sum(1 for c in ls if _in(c, target)) / len(ls) if ls else 0.0
+        return foreign > 0, len(borrowed) > 0, share
+An output lapses into a foreign script when it has a letter that is neither Ge'ez nor Latin (Latin is allowed because
+acronyms and names are copied legitimately); it borrows when it has a Latin word that is not in the English source;
+share is the fraction of its letters that are Ge'ez. Report the three as shares over the outputs of a run, paired
+against the unedited model's outputs on the same ids (ref("base"), see below), and always next to chrF.
+
+WHAT YOU HAVE.
+1. A persistent Python kernel (no GPU, no internet): variables survive between your code blocks, like a notebook.
+   Naming note: the harness was built for a different experiment and calls the resident model "base". Here:
+   load_base(name, rows=None) returns TranslateGemma's tensor (the model you are editing); load_med(name, rows=None)
+   returns the ORIGINAL Gemma 3 4B-it's tensor (before the translation fine-tune); load_tr(name, rows=None) returns
+   TranslateGemma again, so diff_tr is zero and of no use; diff_med(name, rows=None) = Gemma - TranslateGemma, the
+   fine-tune's own change with its sign flipped (TranslateGemma + diff_med = the original Gemma). load(name,
+   rows=None) is the current value (your edit if there is one, else TranslateGemma). save_edit(name, tensor) stores
+   a tensor as the model's value of that name in <repo>/runs/lang_am_r1/work/edited/ (a name not saved stays TranslateGemma's; refused:
+   names outside NAMES, wrong shapes, NaN or inf); drop_edit(name), drop_all_edits(), edited(). linear_edit(a, b,
+   names=None) saves TranslateGemma + a * diff_med + b * diff_tr; with b = 0 it moves the model back toward the
+   original Gemma, which is an intervention you may find useful, not a recipe. Also: NAMES (the 444 text-model
+   tensor names, the only editable ones), SHAPES, CONFIG; tok (the tokenizer; tok.convert_ids_to_tokens and
+   tok.decode let you sort the vocabulary's 262,144 real rows by script, which you are allowed to do and will want
+   to); set_format (leave it at plain) and FORMAT; eval_prompt(source) (the exact prompt string the server feeds the
+   model); PRACTICE_ITEMS (list of {id, source, reference}), ids(), item(id); chrf(hypothesis, reference) and
+   corpus_chrf(hypotheses, references); ref("base") (the unedited TranslateGemma's translation and chrF of every
+   practice sentence under the plain instruction: your frame), ref("med") (the original Gemma, plain), ref("tr")
+   (TranslateGemma in its own template) and REF_SUMMARY. Float32 tensors; the embedding matrix is 2.7 GB in
+   float32, read it in row chunks (rows=(a, b)). Available: numpy, scipy, scikit-learn, PyTorch (CPU), pandas,
+   safetensors, tokenizers, sacrebleu. Gradients are disabled. One execution may take up to 900 seconds and about
+   12 GB of arrays; output is cut at 10,000 characters. You may run code up to 300 times. If the kernel is
+   restarted (time or memory limit), its variables are lost and you are told so; your edits on disk survive.
+2. The practice set: 971 English sentences with their Amharic references (none is in the evaluation;
+   the evaluation sentences come from the same source). The English sources are the same sentences in every
+   language of this collection.
+3. A test-run tool with a budget of 30 test runs in total. One test run translates practice sentences with
+   your CURRENT model (TranslateGemma plus whatever is in <repo>/runs/lang_am_r1/work/edited at that moment) and scores them. Reply with
+   exactly one block that starts with ```forward and contains JSON:
+   {"type": "translate", "ids": ["<practice id>", ...] (optional; default all 971; an id at most once),
+    "prompts": ["<any English text>", ...] (optional, ungraded, at most 64), "prompt_lang": "my" (optional;
+    translates the free prompts into Burmese instead of Amharic; the graded ids stay Amharic),
+    "max_tokens": 512 (1..1024)}
+   Greedy decoding, so a repeated request with unchanged weights returns the same translations. The reply gives
+   corpus chrF and mean sentence chrF on those ids, the cut share, the mean length, the empty count, the three
+   references' scores on the same ids and the paired comparison with each (mean per-sentence difference with its
+   standard error, better and worse counts, corpus difference), and COMET-22 with paired differences. The lapse
+   measure is yours to compute from <repo>/runs/lang_am_r1/work/run_<k>.jsonl (fields id, source, reference, output, chrf, n_tokens,
+   finish_reason, cut); the free prompts' outputs are in <repo>/runs/lang_am_r1/work/run_<k>_prompts.jsonl (prompt, output, lang).
+   The free prompts are your only window into a second language: send English practice sources with "prompt_lang"
+   and measure their lapses with the same function and Burmese's script (ranges in the measure: replace ETH
+   by the script of Burmese; use unicodedata.name to find it). A full run of 971 sentences takes a few
+   minutes; a request that fails (unknown id, a tensor that fails verification) does not count against the budget.
+4. A shell, as described in the preamble. The GPU is not visible to it and must not be made visible; loading or
+   running any model anywhere except through the test-run tool is forbidden; so is reading anything under
+   data/eval/ or any file with "test" in its name. Every command you run is logged and audited after the run; a
+   run that breaks these rules is discarded.
+
+HOW TO WORK. The budget is for converging, not for exploring. Decide after every run.
+1. Frame (one run). Fix two disjoint sets of practice ids with a seed and record them in your notes: SEL, about
+   300 ids, for choosing; CONF, the rest, for confirming. Run 1 is the unedited model on SEL plus 40 English
+   practice sources as free prompts with "prompt_lang": "my", so that you know the lapse rates of both
+   languages on exactly the sentences you will reuse. This run is your frame, not ref("base"): the cached
+   reference outputs came from a separate scorer whose greedy decoding diverges from the test-run engine on many
+   of these long outputs (same model, bf16 arithmetic), so compare edited runs with run 1 and with each other,
+   and use ref("base") only for its per-sentence references and as a rough guide. Read the outputs: where the lapses happen (sentence start,
+   after punctuation, inside long sentences), which words are replaced, which languages intrude.
+2. Localize before you fix (free reads, then at most four runs). The choice of the next token is made at the output
+   layer (the tied embedding) from what the last layers wrote. Free reads worth doing: how the fine-tune changed
+   the embedding rows of Ge'ez tokens against rows of the intruding scripts and Latin (norms, mean direction,
+   relative change); the same by layer for the late MLPs, the attention outputs and the norms; whether the Ge'ez
+   rows are an outlier group in the vocabulary (norm, mean) in TranslateGemma and in the original Gemma. Then
+   interventions that move one whole part at a time (a part set back to the original Gemma, a part scaled, a group
+   of rows scaled) to see which parts move the lapse rate and which only move chrF. One run per intervention, on
+   SEL, lapse rates and chrF read together.
+3. One fix (at most four runs). Build it from what step 2 showed, choose its strength on SEL, confirm the chosen
+   strength once on CONF, and send the same 40 free prompts in Burmese with the confirming run. If
+   Burmese moves the same way, you have a general edit; if only Amharic moves, say so and consider
+   whether the general version is within reach with the runs you have left.
+4. Stop rule. When a recipe halves the foreign-script share on CONF with chrF not lower, and you have checked
+   Burmese, install it and finish, even with runs left. Do not spend the budget decorating. If after eight runs
+   nothing has moved the lapse rate, write down what you learned about where the language choice lives and
+   install the best quality-neutral edit you have, or nothing.
+5. Never repeat an identical request with unchanged weights. Keep <repo>/runs/lang_am_r1/driver/notes.md
+   up to date (SEL and CONF, findings with numbers, every edit tried and its measured effect on lapses and chrF,
+   the current best recipe; it is what you get back if the conversation is restarted). State the hypothesis of
+   each code block in its first comment line; keep per-tensor statistics in variables; print compact summaries,
+   never whole arrays; print short excerpts of outputs, at most about 300 characters each.
+
+EXPLAIN EVERY STEP. In every message, before your code or forward block, explain in plain English (about 3 to 8
+sentences): what the last result showed, what you conclude, what you will do now and why, and what outcome would
+confirm or refute your current hypothesis. In your final answer, also summarize the path that led to your edit,
+the edit itself (which tensors, which rows, what arithmetic, what strength), what you learned about where the
+model's choice of language is made and lost, and whether the edit is specific to Amharic or general. These
+explanations are read by the experimenters.
+
+RULES. Not allowed: (a) gradient descent or any other training: no backward passes, autograd or optimizers, and no
+fitting of weights to a loss, to outputs or to activations, iterative or closed-form (summary statistics such as
+norms, cosines, covariances, correlations, PCA and SVD of tensors are allowed; choosing a strength by measured
+lapses and chrF on practice sentences is what the budget is for); (b) running the model other than through the
+test-run tool: do not implement or simulate the network's computation on any input in the kernel or the shell;
+(c) internet access; (d) reading the evaluation sentences; (e) any ingredient other than TranslateGemma's own
+tensors, the original Gemma's tensors and the tokenizer's vocabulary (no other checkpoints, no outside data, no
+text or references written into the weights); (f) edits outside the 444 text-model tensors; (g) changes to the
+decoding or the prompt. Allowed: any analysis of the weights and of test-run results, any use of the practice
+sentences, any arithmetic you can justify on the allowed ingredients, including per-row and per-group scaling
+and masking of the embedding, the norms and the matrices.
+
+HOW THE SESSION RUNS. It continues until all 30 test runs are used or you stop under the stop rule (a message
+without a code block does not end it earlier otherwise); make sure <repo>/runs/lang_am_r1/work/edited holds your final edit (if it holds
+nothing, the unedited TranslateGemma is what gets evaluated), and send a final message without a fenced block
+saying what you built, the edit, the evidence on CONF and on Burmese, and why you expect it to hold on
+sentences and languages it has not seen.

@@ -1,0 +1,167 @@
+PREAMBLE (how to work with the harness). You are the driver in a weight-space experiment. You act through one
+command, from <repo>:
+    python3 harness/cli.py submit r2_prune64 <file>
+where <file> is a text file you write containing your explanation and exactly ONE fenced block, either ```python
+(code for the persistent kernel) or ```forward (one JSON request for the forward-pass tool). The command prints the
+reply (the kernel's output, or the forward pass summary) and that reply is your next observation. Submit one message
+at a time and read the reply before the next. Write your message files under <repo>/runs/r2_prune64/work/msgs/ (any names). Everything
+you submit and receive is logged in runs/r2_prune64/. Use your shell only for writing message files, reading result
+files under <repo>/runs/r2_prune64/work, and running analysis scripts over them when a kernel block is not convenient; the rules below
+on what the shell may not do are absolute. Stay inside these locations: runs/r2_prune64/, data/practice/, data/stats/,
+the two model folders and harness/README.md (the tool reference); nothing else in the repository concerns you. When
+you are done, submit a final message with no fenced block, and then end with a short report of what you kept and the
+evidence. A forward request may take up to 15 minutes to return; that is normal, wait for it (use a generous command
+timeout). If a submit command fails because the forward server is still starting, wait a minute and submit again.
+
+TASK. You are given a mixture-of-experts language model and a budget, and you decide which experts it keeps. The
+base is Gemma 4 26B-A4B-it (30 layers of width 2,816; every layer has attention (16 query heads, 8 key/value heads of
+size 256; layers 5, 11, 17, 23 and 29 attend to the whole context with 2 key/value heads of size 512, the others to a
+sliding window of 1,024 tokens), a dense GeGLU MLP of width 2,112, and a mixture of 128 experts of width 704
+(experts.gate_up_proj, experts.down_proj) from which a router (router.proj, router.scale, router.per_expert_scale)
+picks 8 per token; RMSNorm before and after each block; vocabulary 262,144; tied embeddings; final logit soft-capping
+at 30). The copy you have was pruned once already: in every layer the 64 of 128 experts that medical text routed to
+most often were kept, the rest deleted, kept experts renumbered (KEEP maps slots to original ids). Your job is to
+PRUNE IT FURTHER TO A BUDGET: 1,320 active experts in total over the 30 layers (the same count as 44 per
+layer), split across layers as you see fit with at least 8 active in every layer. You do not edit weights; you choose
+which experts stay active by setting a routing mask, and masked experts are never selected (equivalent to deleting
+them). The goal is the model inside that budget that answers medical questions as well as possible while keeping its
+general instruction-following.
+
+HOW IT WILL BE MEASURED. After you finish, the model with your final mask is evaluated on a hard medical
+multiple-choice benchmark and on an instruction-following benchmark with this fixed protocol: the chat template with
+thinking off; the system message "You are a medical expert."; the user message is the question, the options one per
+line as "A. ...", and the line "Answer with the letter of the correct option, in the form 'Answer: X'."; sampling with
+temperature 1.0, top_k 64, top_p 0.95 and at most 4,096 new tokens; the LAST "Answer: X" in the response is graded
+against the key. You never see these benchmarks. Your model is reported next to: the standard recipe (44 experts per
+layer by medical frequency, called the floor below), the same recipe with a global budget (the 1,320
+most-used experts across all layers at once, so layers get different counts), a control that keeps the most-used
+experts at YOUR per-layer counts (so that choosing how many per layer is separated from choosing which), the
+unpruned model, and the 64-expert model you start from. The headline is the fraction of the gap between the floor
+and the unpruned model that your selection closes, with the instruction-following score and the share of answers
+cut at the token limit alongside.
+
+WHAT COUNTS. We want a selection that comes from understanding the network, not from running the same counter
+again. The frequency recipe has known blind spots, measured in an earlier run on the 44-per-layer model: (1) it
+counted routing on prompts only, so experts the model uses when WRITING its answer were under-counted (in most
+layers 20 to 39% of the routing weight on answer tokens went to deleted experts, against 7 to 12% on prompt tokens);
+(2) positions that occur once per text lost the most: the model-turn header, from which the first answer token is
+computed, lost 50 to 100% of its routing weight in layers 0, 1, 14, 16 and 27 to 29, and the colon of the final
+"Answer:" lost 40 to 88% in most layers; (3) the losses are very uneven across layers (layers 15, 19, 28 and 29 lose
+two to three times the median). Two things did NOT work in that run and you should know them: restoring the ten
+loudest early-layer experts (large output norms, firing on the first tokens and function words) changed nothing; and
+putting 97 answer-writing experts back in place of the least-used kept ones made the model write like the unpruned
+one (its log-probability of the unpruned model's answers rose by a nat per token) without changing its accuracy at
+all. A re-prune that counted answer tokens too lost 3 points of accuracy at 44 per layer: writing experts displaced
+knowledge experts. The open lever is allocation and redundancy: which layers deserve more than 44, which fewer,
+and which frequently used experts are redundant because another kept expert does the same work. In scope: any
+selection you can justify with measurements (routing reads, expert similarity, ablations through the mask, paired
+accuracy). Out of scope: weight edits of any kind (save_edit is disabled in this run), changes to the decoding or
+the prompt, and masks with fewer than 8 active experts in a layer.
+
+WHAT YOU HAVE.
+1. A persistent Python kernel (no GPU, no internet): variables survive between your code blocks, like a notebook.
+   The 64-expert model's files are read-only in <repo>/ckpt/g26_keep64_freq, the unpruned base read-only in <repo>/models/gemma-4-26B-A4B-it, practice
+   problems in <repo>/data/practice/practice.jsonl, and <repo>/runs/r2_prune64/work is your read-write folder. Available: numpy, scipy, scikit-learn, PyTorch
+   (CPU), pandas, sympy, networkx, safetensors, tokenizers. Defined in advance: NAMES and SHAPES; load(name,
+   experts=None) (a float32 torch tensor of the 64-expert model; experts=[...] reads only those slots of a fused
+   expert tensor or router tensor); load_full(name, experts=None) (the same tensor in the UNPRUNED base, by original
+   index); tok (the tokenizer); CONFIG; KEEP[layer] (for each of the 64 slots, the original expert index);
+   ACTIVE[layer] (the original ids currently active in that layer; all 64 at the start),
+   set_active(layer, ids) (set the active experts of a layer by original id; takes effect on the next forward
+   request), active_total() and save_mask() (writes <repo>/runs/r2_prune64/work/mask.json, the object that is evaluated); KEEP44[layer]
+   (the floor's 44 per layer) and GLOBAL[layer] (the mechanical global-budget selection), both as original ids, so
+   you can start from either or measure them; STATS (routing statistics of the UNPRUNED model over 2.5M tokens of
+   medical and 2.8M tokens of general text rendered as prompts: per layer and original expert, token counts,
+   router-weight sums, output norms, REAP saliency) and STATS_GEN (the same counted separately on 2,000 practice
+   prompts and on the unpruned model's own answers to them, with the header and "Answer:" colon positions apart;
+   see <repo>/data/stats/README.md); expert_slices(layer); eval_prompt(x) / eval_prompt_ids(x) (the exact prompt the
+   server feeds the model for a practice id or your own user message). Gradients are disabled. One execution may
+   take up to 900 seconds and about 9 GB of arrays; output is cut at 10,000 characters. You may run code up to
+   400 times. If the kernel is restarted (time or memory limit), its variables are lost, you are told so,
+   and the mask is restored from <repo>/runs/r2_prune64/work/mask.json.
+2. Practice problems with answers (none of them is in the evaluation), one JSON object per line with id, source,
+   question, options, answer and, when available, an explanation: <repo>/data/practice/practice.jsonl (8,492 USMLE-style questions,
+   ids medqa_train_*, and 20,000 Indian medical entrance questions, ids medmcqa_train_*). The floor's and the
+   unpruned model's answers to the 2,000 problems listed in <repo>/data/practice/pool_r1.txt were generated in advance, so paired passes on
+   those ids cost no extra time; other ids work too. You may also write your own prompts.
+3. A forward-pass tool with a budget of 80 forward passes in total. A forward pass is one of two things, and
+   each counts as one pass:
+   (a) GENERATION: a model answers up to 512 generations (problems x samples) with the evaluation's protocol. Reply
+   with exactly one block that starts with ```forward and contains JSON:
+   {"type": "generate", "model": "edited", "floor", "full" or "both", "problems": ["<practice id>", ...],
+    "prompts": ["<your own user message>", ...] (optional, ungraded), "n": samples per item (items x n <= 512;
+    with "both" <= 256 per model), "max_tokens": at most 4096, "activations": {"layers": [0..30], "mlp": true or
+    false, "router": true or false} (optional)}
+   "edited" runs the 64-expert model with your CURRENT mask (any mask with at least 8 active per layer is accepted,
+   including all 64, so you can measure where you start; every reply shows the active total against the budget);
+   "floor" is the 44-per-layer standard prune and "full" the unpruned model; "both" runs edited and floor on the
+   same items and returns a paired comparison (the accuracy difference edited - floor over items with its standard
+   error, how many samples went from wrong to right and back) together with the full model's accuracy on the same
+   items when it is cached. The sampling seed of every item is fixed by the problem, in every pass and for every
+   model. Every answer to a practice problem is graded. You get the accuracy (overall and by source), the mean
+   length, the share cut at max_tokens and the failure counts; texts, extracted answers and grades are in
+   <repo>/runs/r2_prune64/work/gen_<k>.jsonl (with "both": gen_<k>_floor.jsonl and gen_<k>_edited.jsonl). With "activations", for every
+   generated answer the residual stream at the requested layers is saved at the last prompt token and averaged over
+   the answer; "mlp": true adds the dense MLP activations and "router": true the router probabilities over the
+   active experts and each answer's expert-usage frequencies: <repo>/runs/r2_prune64/work/gen_<k>_acts/. Not available for "full".
+   (b) TEACHER-FORCED: a model reads up to 1,024 texts of up to 32,768 tokens each, at most 524,288 tokens in total
+   (no generation; it takes a few minutes). Reply with a ```forward block containing JSON:
+   {"type": "teacher_forced", "model": "edited" or "floor", "texts": ["raw text", ...] or "chats": [[{"role":
+    "user", "content": "..."}, {"role": "assistant", "content": "..."}], ...], "return": {"token_logprobs": true,
+    "topk": k (at most 50), "hidden_states": [layers 0..30], "mlp_act": [layers 0..29], "router": [layers 0..29]
+    (router logits over the active experts, the 8 selected slots and their final weights, per token), "expert_act":
+    [layers 0..29] (the input of each selected expert's down projection, per token)}}
+   The results of (b) are .npy files (with meta.json describing every array) in <repo>/runs/r2_prune64/work/fwd_<k>/, right-padded to the
+   longest text (at most 6 GB per pass). To score an answer the model generated, send eval_prompt(id) + answer as one
+   raw text. A request that fails does not count against the budget. A generation pass takes up to about
+   15 minutes at full size; the full model is not available teacher-forced (it does not fit in bf16).
+4. A shell, as described in the preamble. The GPU is not visible to it and must not be made visible; loading or
+   running the model anywhere except through the forward-pass tool is forbidden; so is reading anything under
+   data/eval/ or any benchmark file. Every command you run is logged and audited after the run; a run that breaks
+   these rules is discarded.
+
+HOW TO WORK.
+1. Measure the frame first. One paired pass ("both" on a diagnostic set from <repo>/data/practice/pool_r1.txt) with all 64 active gives the
+   gap between the 64-expert model and the floor, and the full model's score on the same items: that is the most
+   any mask can recover. A second paired pass with the floor's own list (set every layer to KEEP44) should show a
+   difference of about zero; it calibrates the mask against the physical prune and the pairing noise.
+2. Read before you cut. A teacher-forced read with "router" on a few hundred practice prompts with their reference
+   answers, all 64 active, gives the usage, the router weight and the selection rank of every expert on every token,
+   on prompt tokens and answer tokens separately. Find, per layer, how much routing weight the frequency recipe
+   throws away and how concentrated the remaining usage is; find experts that are heavily used in a few layers and
+   nearly idle in others; find pairs of experts with similar weights or similar activation patterns (one of them may
+   be redundant). Decide the per-layer counts from evidence, then the experts.
+3. Cut in steps and measure each step. Drop a group, run a paired pass on problems you did not use to choose it,
+   keep the step only if the loss is inside noise, back off if it is not. The budget is tight enough that most of
+   your passes should be paired generations of 256 problems per model (standard error about 2 points on the
+   difference; pairing noise with identical weights was 0.000 with SE 0.021). Dense measurements are cheap and
+   sharper: a teacher-forced pass over up to 1,024 practice problems with their reference answers gives the
+   log-probability of the correct letter and of the explanation on every text; use them to rank candidate cuts, and
+   confirm the survivors with generation.
+4. Never repeat an identical request with an unchanged mask (it costs a pass and adds little). Keep
+   <repo>/runs/r2_prune64/work/notes.md up to date (findings with numbers, the per-layer counts and the rationale, every cut tried and its
+   measured effect, the current best mask and the problem sets you used; it is what you get back if the conversation
+   is restarted); call save_mask() whenever the current mask is your best so far.
+5. Work efficiently: state the hypothesis of each code block in its first comment line; load things once; read
+   experts selectively (a full expert tensor of one layer is 64 x 1,408 x 2,816 floats = 1 GB in float32); print
+   compact summaries, never whole arrays, and never raw lists of vocabulary tokens; print short excerpts of
+   generated texts, at most about 300 characters each.
+
+EXPLAIN EVERY STEP. In every message, before your code or forward block, explain in plain English (about 3 to 8
+sentences): what the last result showed, what you conclude from it, what you will do now and why, and what outcome
+would confirm or refute your current hypothesis. In your final answer, also summarize the path that led to your
+selection, the per-layer counts and why, and what you learned about what the experts do. These explanations are
+read by the experimenters.
+
+RULES. Not allowed: (a) gradient descent or any other training: no backward passes, autograd or optimizers, and no
+fitting of weights to a loss or to activations, iterative or closed-form (summary statistics such as means, norms,
+covariances, correlations, PCA and SVD are allowed); (b) running the model other than through the forward-pass
+tool: do not implement or simulate the network's computation on any input in the kernel or the shell; (c) internet
+access; (d) reading the evaluation sets; (e) weight edits. Allowed: any analysis of the weights and of forward-pass
+results, any use of the practice problems, and any mask with at least 8 active experts per layer.
+
+HOW THE SESSION RUNS. It continues until all 80 forward passes are used (a message without a code block does
+not end it earlier); after that, make your final choice, call save_mask() so that <repo>/runs/r2_prune64/work/mask.json holds it (it
+must be within the 1,320 budget, or the submission is refused), and send a final message without a
+fenced block, saying what you kept, the per-layer counts, the evidence and why you expect it to be better than the
+standard recipe.

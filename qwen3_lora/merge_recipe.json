@@ -1,0 +1,152 @@
+{
+ "name": "Fable's composite of run l2, and the baselines it is compared with",
+ "base": {
+  "repo": "Qwen/Qwen3-4B-Instruct-2507",
+  "revision": "cdbee75f17c01a7cc42f958dc650907174af0554",
+  "note": "frozen; every row is the base plus one LoRA adapter"
+ },
+ "adapters": {
+  "circa": {
+   "repo": "r-three/lora_baseline_qwen_lr3e-4_step400_rank64_circa",
+   "revision": "1b7c68ce0c6e0f4d717aa3641c544a3fa5f32e49",
+   "adapter_model.safetensors_sha256": "17c57510381ca391bc0a29f5bc2687e55065e987aeefc88284f808e385a4e154",
+   "r": 64,
+   "lora_alpha": 16,
+   "scaling": 0.25,
+   "modules": "q,k,v,o,gate,up,down of all 36 layers (252)",
+   "delta_norm": 2.44
+  },
+  "mnist_ascii": {
+   "repo": "r-three/lora_baseline_qwen_lr3e-4_step400_rank64_mnist_ascii",
+   "revision": "f4e107d84c7d239380901ffa26de2b1a000f02ec",
+   "adapter_model.safetensors_sha256": "8cfb99b78e4b87f4a96a2b60e980df3b2951b4111b573991d349e7d14b7bbaba",
+   "r": 64,
+   "lora_alpha": 16,
+   "scaling": 0.25,
+   "modules": "q,k,v,o,gate,up,down of all 36 layers (252)",
+   "delta_norm": 5.891
+  },
+  "banking77": {
+   "repo": "r-three/lora_baseline_qwen_lr3e-4_step400_rank64_banking77",
+   "revision": "ca6be05be10d5a876f04c1800d62e97cf9d62026",
+   "adapter_model.safetensors_sha256": "0c048eb18220e1d4d6b93c1121c02c6d77c601d8756b35787b181af9a61a8a40",
+   "r": 64,
+   "lora_alpha": 16,
+   "scaling": 0.25,
+   "modules": "q,k,v,o,gate,up,down of all 36 layers (252)",
+   "delta_norm": 1.624
+  },
+  "xnli_es": {
+   "repo": "r-three/lora_baseline_qwen_lr3e-4_step400_rank64_xnli_es",
+   "revision": "7a3e8800c295232a478d26bcd2ba674fb159f511",
+   "adapter_model.safetensors_sha256": "f2eedbed5d9c2d8fdbdd6d2ec6c5600ca2e42d6ca1d4a156c43c3d5fc2bb138e",
+   "r": 64,
+   "lora_alpha": 16,
+   "scaling": 0.25,
+   "modules": "q,k,v,o,gate,up,down of all 36 layers (252)",
+   "delta_norm": 0.658
+  },
+  "disfl_qa": {
+   "repo": "r-three/lora_baseline_qwen_lr3e-4_step400_rank64_disfl_qa",
+   "revision": "9b52ff8b6213f9274bb061329825d97bfdef98f8",
+   "adapter_model.safetensors_sha256": "b4378257da9c3d768d7f327c054b8ef97fd31be25e1781fb538dc2ba9e1d735c",
+   "r": 64,
+   "lora_alpha": 16,
+   "scaling": 0.25,
+   "modules": "q,k,v,o,gate,up,down of all 36 layers (252)",
+   "delta_norm": 1.275
+  }
+ },
+ "delta_norm_definition": "Frobenius norm of the adapter's whole update 0.25 * B @ A over all 252 modules; the digit adapter (mnist_ascii, 5.891) is 2.4 to 9.0 times the others (circa 2.440, banking77 1.624, disfl_qa 1.275, xnli_es 0.658)",
+ "fable_l2": {
+  "in words": "Per module, each adapter's A matrix is split into the part all five share (they start from nearly the same random initialization) and its own small part dA. Because the gradient of A is B^T g x^T, the rows of dA lie in the span of that task's own inputs. Each adapter's A is then projected so that it no longer reads the input directions of the other four tasks' dA (the digit adapter keeps its own directions first, because its skill uses them). Then the weights from the earlier run: the digit adapter's MLP part is halved, circa 0.9, banking77 1.1. The B matrices are untouched; the five adapters are concatenated into one rank-320 adapter.",
+  "steps_per_module": [
+   "A_t = (lora_alpha / r) * A_t = 0.25 * A_t (float32), B_t as published, for t in banking77, circa, disfl_qa, mnist_ascii, xnli_es (this order)",
+   "A_shared = elementwise median of the five A_t",
+   "d_t = A_t - A_shared;  V_t = the 64 right singular vectors of d_t (an orthonormal basis of its row space, [in, 64]);  A_t = A_shared + 1.0 * d_t",
+   "for each t: U = [V_s for the four s != t] ([in, 256]); for t = mnist_ascii only: U = U - V_t V_t^T U;  Q, R = qr(U), keep the columns of Q with |R_kk| > 1e-3",
+   "A_t' = w_t(module) * (A_t - A_t Q Q^T)",
+   "A = concat_rows(A_t'), B = concat_cols(B_t): rank 320, stored in bf16 with lora_alpha = r = 320 (scaling 1)"
+  ],
+  "weights_w_t": {
+   "mnist_ascii": {
+    "q_proj, k_proj, v_proj, o_proj": 1.0,
+    "gate_proj, up_proj, down_proj": 0.5
+   },
+   "circa": 0.9,
+   "banking77": 1.1,
+   "disfl_qa": 1.0,
+   "xnli_es": 1.0
+  },
+  "check": {
+   "delta_norm_float32": 5.568922,
+   "share_of_A_norm_removed": "about 30%",
+   "scored_adapter_sha256": "258a2690e7c3b6d4dec5be2829edf06b894b685c78042efba5562c2db9f9b203",
+   "note": "SVD and QR make a rebuild match to float precision, not bit for bit; build.py --compare reports the per-module difference"
+  }
+ },
+ "baselines": {
+  "plain_sum": {
+   "method": "task arithmetic at scale 1.0: the exact sum of the five updates (PEFT add_weighted_adapter, combination 'cat', weights 1)",
+   "A": "concat_rows(1.0 * 0.25 * A_t)",
+   "B": "concat_cols(B_t)",
+   "rank": 320,
+   "dtype": "float32",
+   "delta_norm": 6.870532,
+   "scored_adapter_sha256": "dd16a2fb34066c2834c3030da238609da437ec6c3fc6d9fdbaccf18612454c4c"
+  },
+  "task_arithmetic_0.7": {
+   "method": "task arithmetic (Editing Models with Task Arithmetic, ICLR 2023), PEFT 'cat' with weights 0.7",
+   "scale": 0.7,
+   "rank": 320,
+   "dtype": "float32",
+   "selected": "best on the practice pool after the sweep was widened to scales 0.3 to 0.9 (final selection)",
+   "scored_adapter_sha256": "2764e4b96c9fce3eaf081690f808abaf888aa49ea936265da4c83c9c944470e8"
+  },
+  "ties_d0.2_s1.0": {
+   "method": "TIES-Merging (NeurIPS 2023) on the per-module updates D_t = 0.25 B_t A_t: keep each D_t's top 20% entries by magnitude (ties at the threshold kept), elect the sign of the float64 sum of the trimmed entries (>= 0 -> +), average the entries that agree (disjoint mean), times scale 1.0",
+   "density": 0.2,
+   "scale": 1.0,
+   "served_as": "its best rank-320 approximation (float64 eigendecomposition of the Gram matrix), stored float32",
+   "energy_kept_by_rank_320": 0.931,
+   "lowest_module_energy_kept": 0.735,
+   "scored_adapter_sha256": "ad01b0a50258ee19f028231d60bde63e9bde4216dcff704ae60d188401336ae5"
+  },
+  "dare_ties_p0.9": {
+   "method": "DARE (ICML 2024) with TIES sign election: drop each entry of D_t with probability 0.9 and rescale the rest by 1 / (1 - 0.9), then sign election and disjoint mean as in TIES, scale 1.0",
+   "drop_rate": 0.9,
+   "seed": 0,
+   "mask_seeding": "per module: torch.manual_seed(int.from_bytes(sha256(b'dare:0:<module name>').digest()[:8], 'little') & (2**63 - 1)), then one torch.bernoulli(full_like(D_t, 0.1)) per adapter, adapters in the order circa, mnist_ascii, banking77, xnli_es, disfl_qa",
+   "served_as": "its best rank-320 approximation, stored float32",
+   "energy_kept_by_rank_320": 0.55,
+   "lowest_module_energy_kept": 0.332,
+   "scored_adapter_sha256": "b80f82a7c3beb9819b935eb6b10c4cb1e6cb21fa80f7531160b79afc0897ac8b"
+  },
+  "selection_on_practice": {
+   "how": "every candidate was scored on the same 500 practice questions (100 per task) that Fable's test runs used; mean accuracy of the five tasks, %",
+   "candidates": {
+    "ta_s0.7": 58.4,
+    "ta_s0.4": 58.0,
+    "ta_s0.5": 58.0,
+    "ta_s0.6": 58.0,
+    "ta_s0.8": 57.8,
+    "dare_ties_p0.9": 57.2,
+    "eq_s0.5": 56.2,
+    "ta_s0.9": 56.2,
+    "eq_s0.7": 54.8,
+    "svd_r64": 54.8,
+    "ta_s0.3": 54.8,
+    "eq_s1.0": 54.6,
+    "ties_d0.2_s1.0": 54.6,
+    "dare_linear_p0.5": 54.2,
+    "dare_ties_p0.5": 54.0,
+    "svd_r128": 54.0,
+    "sum_five (plain sum)": 53.8,
+    "dare_linear_p0.9": 53.0,
+    "ties_d0.5_s1.0": 52.8,
+    "ties_d0.2_s0.6": 48.0,
+    "ties_d0.5_s0.6": 47.4
+   }
+  }
+ }
+}
